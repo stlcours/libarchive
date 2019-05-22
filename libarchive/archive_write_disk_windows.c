@@ -764,6 +764,26 @@ _archive_write_disk_filter_bytes(struct archive *_a, int n)
 
 
 int
+archive_write_disk_set_chdir(struct archive *_a, const char *dir)
+{
+	(void)_a; /* UNUSED */
+	(void)dir; /* UNUSED */
+
+	errno = EOPNOTSUPP;
+	return (ARCHIVE_FAILED);
+}
+
+int
+archive_write_disk_set_fchdir(struct archive *_a, int fd)
+{
+	(void)_a; /* UNUSED */
+	(void)fd; /* UNUSED */
+
+	errno = EOPNOTSUPP;
+	return (ARCHIVE_FAILED);
+}
+
+int
 archive_write_disk_set_options(struct archive *_a, int flags)
 {
 	struct archive_write_disk *a = (struct archive_write_disk *)_a;

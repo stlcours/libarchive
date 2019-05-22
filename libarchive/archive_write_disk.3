@@ -24,11 +24,13 @@
 .\"
 .\" $FreeBSD$
 .\"
-.Dd April 3, 2017
+.Dd May 23, 2019
 .Dt ARCHIVE_WRITE_DISK 3
 .Os
 .Sh NAME
 .Nm archive_write_disk_new ,
+.Nm archive_write_disk_set_chdir ,
+.Nm archive_write_disk_set_fchdir ,
 .Nm archive_write_disk_set_options ,
 .Nm archive_write_disk_set_skip_file ,
 .Nm archive_write_disk_set_group_lookup ,
@@ -41,6 +43,10 @@ Streaming Archive Library (libarchive, -larchive)
 .In archive.h
 .Ft struct archive *
 .Fn archive_write_disk_new "void"
+.Ft int
+.Fn archive_write_disk_set_chdir  "struct archive *" "const char *"
+.Ft int
+.Fn archive_write_disk_set_fchdir  "struct archive *" "int fd"
 .Ft int
 .Fn archive_write_disk_set_options "struct archive *" "int flags"
 .Ft int
@@ -85,6 +91,33 @@ interface used to write objects to a streaming archive.
 Allocates and initializes a
 .Tn struct archive
 object suitable for writing objects to disk.
+.It Fn archive_write_disk_set_chdir
+.It Fn archive_write_disk_set_fchdir
+Sets the current working directory for writing disk objects.
+.Fn archive_write_disk_set_chdir
+takes a
+.Fa path
+argument and
+.Fn archive_write_disk_set_fchdir
+an open file descriptor to a directory or the special value
+.Cm AT_FDCWD
+to reset to previous behavior. Once called with success the writer does
+not perfom any
+.Fn chdir
+or
+.Fn fchdir
+operations anymore and is not dependent on the current working directory.
+This function does not operate on all platforms. It returns
+.Er ARCHIVE_OK
+on success and
+.Er ARCHIVE_FAILED
+on failure. Error codes are stored in the global variable
+.Fa errno .
+If
+.Fa errno
+is set to
+.Er EOPNOTSUPP
+the function is not operational on the current platform.
 .It Fn archive_write_disk_set_skip_file
 Records the device and inode numbers of a file that should not be
 overwritten.

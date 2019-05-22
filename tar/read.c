@@ -108,7 +108,6 @@ tar_mode_x(struct bsdtar *bsdtar)
 	if ((bsdtar->flags & OPTFLAG_NUMERIC_OWNER) == 0)
 		archive_write_disk_set_standard_lookup(writer);
 	archive_write_disk_set_options(writer, bsdtar->extract_flags);
-
 	read_archive(bsdtar, 'x', writer);
 
 	if (unmatched_inclusions_warn(bsdtar->matching,
@@ -224,7 +223,24 @@ read_archive(struct bsdtar *bsdtar, char mode, struct archive *writer)
 		lafe_errc(1, 0, "Error opening archive: %s",
 		    archive_error_string(a));
 
-	do_chdir(bsdtar);
+	if (bsdtar->pending_chdir != NULL) {
+		/* It makes no sense to chdir in t mode */
+		if (writer != NULL) {
+			r = archive_write_disk_set_chdir(writer,
+			    bsdtar->pending_chdir);
+			if (r != ARCHIVE_OK) {
+				if (errno == EOPNOTSUPP)
+					do_chdir(bsdtar);
+				else {
+					lafe_errc(1, 0,
+					    "could not chdir to '%s'\n",
+					    bsdtar->pending_chdir);
+				}
+			}
+		}
+		free(bsdtar->pending_chdir);
+		bsdtar->pending_chdir = NULL;
+	}
 
 	if (mode == 'x') {
 		/* Set an extract callback so that we can handle SIGINFO. */

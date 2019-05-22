@@ -941,6 +941,13 @@ __LA_DECL int archive_write_disk_set_user_lookup(struct archive *,
     void (* /* cleanup */)(void *));
 __LA_DECL la_int64_t archive_write_disk_gid(struct archive *, const char *, la_int64_t);
 __LA_DECL la_int64_t archive_write_disk_uid(struct archive *, const char *, la_int64_t);
+/*
+ * Set a working directory on platforms that have openat(), fstatat() and all
+ * other required ...at() functions. Once set the writer operates with a
+ * directory file descriptor. It does not call chdir() or fchdir() and is not  * affected by these calls.
+ */
+__LA_DECL int archive_write_disk_set_chdir(struct archive *, const char *);
+__LA_DECL int archive_write_disk_set_fchdir(struct archive *, int);
 
 /*
  * ARCHIVE_READ_DISK API

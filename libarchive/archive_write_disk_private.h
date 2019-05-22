@@ -39,7 +39,7 @@
 
 struct archive_write_disk;
 
-int archive_write_disk_set_acls(struct archive *, int, const char *,
+int archive_write_disk_set_acls(struct archive *, int, int, const char *,
     struct archive_acl *, __LA_MODE_T);
 
 #endif

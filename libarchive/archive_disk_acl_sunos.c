@@ -791,12 +791,31 @@ archive_read_disk_entry_setup_acls(struct archive_read_disk *a,
 }
 
 int
-archive_write_disk_set_acls(struct archive *a, int fd, const char *name,
-    struct archive_acl *abstract_acl, __LA_MODE_T mode)
+archive_write_disk_set_acls(struct archive *a, int parent_fd, int fd,
+    const char *name, struct archive_acl *abstract_acl, __LA_MODE_T mode)
 {
 	int		ret = ARCHIVE_OK;
-
 	(void)mode;	/* UNUSED */
+#if defined(HAVE_OPENAT) && defined(HAVE_FACL)
+        int fd_opened = 0;
+
+	if (fd < 0 && (archive_acl_types(abstract_acl) &
+	    (ARCHIVE_ENTRY_ACL_TYPE_POSIX1E
+#if ARCHIVE_ACL_SUNOS_NFS4
+	    | ARCHIVE_ENTRY_ACL_TYPE_NFS4
+#endif
+	    )) != 0) {
+		fd = openat(parent_fd, name,
+		    O_WRONLY | O_CLOEXEC | O_NOFOLLOW);
+		if (fd >= 0)
+		    fd_opened = 1;
+		else {
+			archive_set_error(a, errno, "Failed to open for "
+			    "setting ACL: %s", name);
+			return (ARCHIVE_WARN);
+		}
+	}
+#endif
 
 	if ((archive_acl_types(abstract_acl)
 	    & ARCHIVE_ENTRY_ACL_TYPE_POSIX1E) != 0) {
@@ -805,6 +824,10 @@ archive_write_disk_set_acls(struct archive *a, int fd, const char *name,
 		    ARCHIVE_ENTRY_ACL_TYPE_POSIX1E, "posix1e");
 
 		/* Simultaneous POSIX.1e and NFSv4 is not supported */
+#if defined(HAVE_OPENAT) && defined(HAVE_FACL)
+		if (fd_opened)
+			close(fd);
+#endif
 		return (ret);
 	}
 #if ARCHIVE_ACL_SUNOS_NFS4
@@ -813,6 +836,10 @@ archive_write_disk_set_acls(struct archive *a, int fd, const char *name,
 		ret = set_acl(a, fd, name, abstract_acl,
 		    ARCHIVE_ENTRY_ACL_TYPE_NFS4, "nfs4");
 	}
+#endif
+#if defined(HAVE_OPENAT) && defined(HAVE_FACL)
+	if (fd_opened)
+		close(fd);
 #endif
 	return (ret);
 }

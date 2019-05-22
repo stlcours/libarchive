@@ -542,18 +542,41 @@ archive_read_disk_entry_setup_acls(struct archive_read_disk *a,
 }
 
 int
-archive_write_disk_set_acls(struct archive *a, int fd, const char *name,
-    struct archive_acl *abstract_acl, __LA_MODE_T mode)
+archive_write_disk_set_acls(struct archive *a, int parent_fd, int fd,
+    const char *name, struct archive_acl *abstract_acl, __LA_MODE_T mode)
 {
 	int		ret = ARCHIVE_OK;
+#if defined(HAVE_OPENAT) && defined(HAVE_ACL_SET_FD_NP)
+	int		fd_opened = 0;
+#else
+	(void)parent_fd;
+#endif
+	(void)mode;     /* UNUSED */
 
-	(void)mode;	/* UNUSED */
+#if defined(HAVE_OPENAT) && defined(HAVE_ACL_SET_FD_NP)
+	if (fd < 0 && (archive_acl_types(abstract_acl) &
+	    ARCHIVE_ENTRY_ACL_TYPE_NFS4) != 0) {
+		fd = openat(parent_fd, name,
+		    O_WRONLY | O_CLOEXEC | O_NOFOLLOW);
+		if (fd >= 0)
+			fd_opened = 1;
+		else {
+			archive_set_error(a, errno, "Failed to open for "
+			    "setting ACL: %s", name);
+			return (ARCHIVE_WARN);
+		}
+	}
+#endif
 
 	if ((archive_acl_types(abstract_acl) &
 	    ARCHIVE_ENTRY_ACL_TYPE_NFS4) != 0) {
 		ret = set_acl(a, fd, name, abstract_acl,
 		    ARCHIVE_ENTRY_ACL_TYPE_NFS4, "nfs4");
 	}
+#if defined(HAVE_OPENAT) && defined(HAVE_ACL_SET_FD_NP)
+	if (fd_opened)
+		close(fd);
+#endif
 	return (ret);
 }
 #endif	/* ARCHIVE_ACL_DARWIN */
